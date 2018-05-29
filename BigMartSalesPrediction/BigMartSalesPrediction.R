@@ -314,3 +314,6 @@ varImpPlot(forest_model)
 
 # can only varImpPlot with randomForest
 # Item_MRP is the most important variable
+# we get Mean of SE = 1282586, RMSE = 1132.513
+
+main_predict <- predict(main_tree, newdata = new_test, type = "vector")
