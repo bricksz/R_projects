@@ -1,6 +1,6 @@
 #Load Datasets
 
-setwd("E:/RStudio/R projects")
+setwd("E:/RStudio/R projects/BigMartSalesPrediction")
 train <- read.csv("Train_UWu5bXk.csv")
 test <- read.csv("Test_u94Q5KV.csv")
 
@@ -155,10 +155,27 @@ combi <- dummy.data.frame(combi, names = c('Outlet_Size',
 str(combi)
 
 
+
+
+
+
+
+
+
+
+
+# lin analysis
+
+linear_model <- lm(Item_Outlet_Sales ~ ., data = combi)
+summary(linear_model)
+
+# R^2 value is bad, soem of the variables that isnt helping 
+
+
 # Robust reg model
 
 
-setwd("E:/RStudio/R projects")
+setwd("E:/RStudio/R projects/BigMartSalesPrediction")
 train <- read.csv("Train_UWu5bXk.csv")
 test <- read.csv("Test_u94Q5KV.csv")
 
@@ -176,6 +193,9 @@ combi$Item_Weight[is.na(combi$Item_Weight)] <- median(combi$Item_Weight, na.rm =
 combi$Item_Visibility <- ifelse(combi$Item_Visibility == 0, median(combi$Item_Visibility),
                                 combi$Item_Visibility)
 
+# first index of Outlet_size is blank, need to replace with a name
+View(levels(combi$Outlet_Size))
+
 #rename level in Outlet_Size
 levels(combi$Outlet_Size)[1] <- "Other"
 
@@ -183,11 +203,12 @@ levels(combi$Outlet_Size)[1] <- "Other"
 library(plyr)
 combi$Item_Fat_Content <- revalue(combi$Item_Fat_Content,c("LF" = "Low Fat", "reg" =                                   "Regular"))
 combi$Item_Fat_Content <- revalue(combi$Item_Fat_Content, c("low fat" = "Low Fat"))
+table(combi$Item_Fat_Content)
 
 #create a new column 2013 - Year
 combi$Year <- 2013 - combi$Outlet_Establishment_Year
 
-#drop variables not required in modeling
+#drop variables not required in modeling, -c( , , , ) drops index in combi
 library(dplyr)
 combi <- select(combi, -c(Item_Identifier, Outlet_Identifier, Outlet_Establishment_Year))
 
@@ -195,7 +216,7 @@ combi <- select(combi, -c(Item_Identifier, Outlet_Identifier, Outlet_Establishme
 new_train <- combi[1:nrow(train),]
 new_test <- combi[-(1:nrow(train)),]
 
-#linear regression
+#linear regression, analysis from new_train data set with Item_Outlet_Sales as dependent variable
 linear_model <- lm(Item_Outlet_Sales ~ ., data = new_train)
 summary(linear_model)
 
@@ -225,7 +246,7 @@ plot(linear_model)
 
 # check RMSE and compare with other algorithms
 
-install.packages("Metrics")
+#install.packages("Metrics")
 library(Metrics)
 rmse(new_train$Item_Outlet_Sales, exp(linear_model$fitted.values))
 
@@ -276,7 +297,20 @@ library(randomForest)
 control <- trainControl(method = "cv", number = 5)
 
 #random forest model
-rf_model <- train(Item_Outlet_Sales ~ ., data = new_train, method = "parRF", trControl =                 control, prox = TRUE, allowParallel = TRUE)
+rf_model <- train(Item_Outlet_Sales ~ ., data = new_train, 
+                  method = "parRF", trControl = control, 
+                  prox = TRUE, allowParallel = TRUE)
 
 #check optimal parameters
 print(rf_model)
+
+# output best one is mtry = 15, at RMSE = 1120.297
+
+#random forest model
+forest_model <- randomForest(Item_Outlet_Sales ~ ., data = new_train, 
+                               mtry = 15, ntree = 1000)
+print(forest_model)
+varImpPlot(forest_model)
+
+# can only varImpPlot with randomForest
+# Item_MRP is the most important variable
